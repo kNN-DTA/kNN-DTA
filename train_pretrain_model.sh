@@ -3,11 +3,11 @@ ulimit -c unlimited
 [ -z "${data_path}" ] && data_path='./data-bin/BindingDB_Ki'
 [ -z "${save_path}" ] && save_path='./checkpoints'
 [ -z "${save_prefix}" ] && save_prefix='kNN-DTA-tmp'
-[ -z "${seed}"] && seed=1
 [ -z "${total_steps}" ] && total_steps=35600  # 100 epochs through IMDB for bsz 32
 [ -z "${warmup_steps}" ] && warmup_steps=1780      # 5 epochs of the number of updates
 [ -z "${dataset_name}" ] && dataset_name="BindingDB_Ki"
 
+[ -z "${seed}"] && seed=1
 [ -z "${dropout}" ] && dropout=0.1
 [ -z "${attn_dropout}" ] && attn_dropout=0.1
 [ -z "${lr}" ] && lr=1e-04
@@ -16,7 +16,6 @@ ulimit -c unlimited
 [ -z "${weight_decay}" ] && weight_decay=0.0
 [ -z "${clip_norm}" ] && clip_norm=1.0
 
-[ -z "${FAIRSEQ}" ] && FAIRSEQ=~/fairseq_itp
 [ -z "${MASTER_PORT}" ] && MASTER_PORT=10086
 [ -z "${OMPI_COMM_WORLD_SIZE}" ] && OMPI_COMM_WORLD_SIZE=1
 
