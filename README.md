@@ -2,7 +2,7 @@
 
 This repository contains the code and data link for [Boosting Drug-Target Affinity Prediction From Nearest Neighbors](https://openreview.net/forum?id=4K2SRejNGEI). The code implementation is based on [fairseq](https://github.com/pytorch/fairseq).
 
-## Overview of Pipeline
+## Pipeline Overview
 
 ![pipeline](img/pipeline.jpg)
 
@@ -98,20 +98,19 @@ cp $DATADIR/valid.label $DATA_BIN/label/valid.label
 ```shell
 export data_path=$DATA_BIN				# processed binary data path
 export save_path=yourSavePath
+export encoder_layers=16
 # 100 epochs. The number of steps changes with different datasets and batch size
-export total_steps=35600					# for BindingDB Ki with bsz 256(32 with 8 GPUs)
-export warmup_steps=1782  				# %5 of total_steps
+export total_steps=35600					# for BindingDB Ki with total bsz 256(32 with 8 GPUs)
+export warmup_steps=1782  				# 5% of total_steps
 export dataset_name="BindingDB_Ki"
 export batch_size=32  						# batch size for a single gpu
 
 bash train_pretrain_model.sh
 ```
 
-Our model is trained on 8 NVIDIA Tesla V100 GPUs
+The pre-trained DTA model is trained on 8 NVIDIA Tesla V100 GPUs. Others are trained or evaluated on a single NVIDIA Tesla V100 GPU.
 
 ## kNN-DTA
-
-
 
 ## Build Datastore
 

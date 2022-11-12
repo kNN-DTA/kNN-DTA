@@ -162,4 +162,7 @@ cython_debug/
 fairseq
 train_adaptive_tmp.sh
 train_pretrain_model_tmp.sh
-install.sh
+
+data-bin
+pretrained_ckpt
+checkpoints

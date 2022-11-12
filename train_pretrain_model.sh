@@ -2,10 +2,13 @@ ulimit -c unlimited
 
 [ -z "${data_path}" ] && data_path='./data-bin/BindingDB_Ki'
 [ -z "${save_path}" ] && save_path='./checkpoints'
-[ -z "${save_prefix}" ] && save_prefix='kNN-DTA-tmp'
+[ -z "${save_prefix}" ] && save_prefix='pretrain'
+[ -z "${encoder_layers}" ] && encoder_layers=16
 [ -z "${total_steps}" ] && total_steps=35600  # 100 epochs through IMDB for bsz 32
 [ -z "${warmup_steps}" ] && warmup_steps=1780      # 5 epochs of the number of updates
 [ -z "${dataset_name}" ] && dataset_name="BindingDB_Ki"
+[ -z "${pretrained_mol_ckpt}" ] && pretrained_mol_ckpt="./pretrained_ckpt/pubchem_L12.pt"
+[ -z "${pretrained_pro_ckpt}" ] && pretrained_pro_ckpt="./pretrained_ckpt/pfam_L12.pt"
 
 [ -z "${seed}"] && seed=1
 [ -z "${dropout}" ] && dropout=0.1
@@ -64,6 +67,10 @@ echo "weight_decay: ${weight_decay}"
 echo "save_dir: ${save_dir}"
 echo "tsb_dir: ${tsb_dir}"
 echo "data_dir: ${data_path}"
+echo "dataset_name: ${dataset_name}"
+echo "encoder_layers": ${encoder_layers}
+echo "pretrained_mol_ckpt: ${pretrained_mol_ckpt}"
+echo "pretrained_pro_ckpt: ${pretrained_pro_ckpt}"
 echo "==============================================================================="
 
 # ENV
@@ -94,7 +101,7 @@ python -m torch.distributed.launch --nproc_per_node=$n_gpu --master_port=$MASTER
     --num-classes 1 --init-token 0 \
     --max-positions-molecule 512 --max-positions-protein 1024 \
     --save-dir $save_dir \
-    --encoder-layers 16 \
+    --encoder-layers $encoder_layers \
     --criterion dti_separate --regression-target \
     --batch-size $batch_size --update-freq $update_freq --required-batch-size-multiple 1 \
     --optimizer adam --weight-decay $weight_decay --adam-betas '(0.9,0.98)' --adam-eps 1e-06 \
@@ -105,6 +112,6 @@ python -m torch.distributed.launch --nproc_per_node=$n_gpu --master_port=$MASTER
     --fp16 --fp16-init-scale 4 --threshold-loss-scale 1 --fp16-scale-window 128 \
     --shorten-method truncate \
     --tensorboard-logdir $tsb_dir \
-    --pretrained-molecule-roberta-checkpoint ./checkpoints/roberta_pubchem_10M_base/checkpoint_best.pt \
-    --pretrained-protein-roberta-checkpoint ./checkpoints/pretrained_protein_roberta/checkpoint_best.pt \
+    --pretrained-molecule-roberta-checkpoint $pretrained_mol_ckpt \
+    --pretrained-protein-roberta-checkpoint $pretrained_pro_ckpt \
     --find-unused-parameters | tee -a $save_dir/training.log
