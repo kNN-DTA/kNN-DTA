@@ -168,3 +168,4 @@ pretrained_ckpt
 checkpoints
 
 local_test*
+.vscode
