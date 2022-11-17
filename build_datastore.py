@@ -17,6 +17,10 @@ from omegaconf import DictConfig
 import numpy as np
 import pandas as pd
 import os
+import sys
+from os import path
+
+sys.path.append(path.join(path.dirname( path.abspath(__file__) ), "fairseq"))
 
 from fairseq import checkpoint_utils, distributed_utils, options, utils
 from fairseq.dataclass.utils import convert_namespace_to_omegaconf

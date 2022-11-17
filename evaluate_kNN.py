@@ -18,6 +18,11 @@ import faiss
 import numpy as np
 import pandas as pd
 
+import sys
+from os import path
+
+sys.path.append(path.join(path.dirname( path.abspath(__file__) ), "fairseq"))
+
 from fairseq import checkpoint_utils, distributed_utils, options, utils
 from fairseq.dataclass.utils import convert_namespace_to_omegaconf
 from fairseq.logging import metrics, progress_bar
@@ -74,9 +79,6 @@ def add_custom_arguments(parser):
     
     parser.add_argument('--datastore-path', type=str, required=True, default='tmp',
                         help='The datastore path, differ with models and datasets')
-
-    parser.add_argument('--data-bin-path', type=str, required=True, default='tmp',
-                        help='The data-bin path')
 #################################################################################################
     parser.add_argument('--sim', type=str, default='L2', choices=['L2', 'cosine', 'attn', 'dot'],
                         help='The similarity metric for search. Note that --sim attn is used with use-attn-cal at the same time.')
@@ -122,7 +124,7 @@ def main(cfg: DictConfig, override_args=None):
         cls_0_np = np.load(f"{cfg.criterion.datastore_path}/cls_0.npy")
         cls_1_np = np.load(f"{cfg.criterion.datastore_path}/cls_1.npy")
           
-        train_label_list = [float(i.strip()) for i in open(f'{cfg.criterion.data_bin_path}/label/train.label').readlines()]
+        train_label_list = [float(i.strip()) for i in open(f'{cfg.task.data}/label/train.label').readlines()]
         cls_datastore = np.c_[cls_0_np, cls_1_np]
 
         

@@ -11,4 +11,4 @@ python evaluate_kNN.py \
     --valid-subset test \
     --criterion dti_separate_knn_cls_eval_no_cross_attn \
     --path $ckpt_path \
-    $data_bin
+    $data_path

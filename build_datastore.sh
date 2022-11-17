@@ -6,4 +6,4 @@ python build_datastore.py \
     --valid-subset train \
     --criterion dti_separate_knn_build_datastore \
     --path $ckpt_path \
-    $data_bin
+    $data_path

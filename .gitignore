@@ -166,3 +166,5 @@ train_pretrain_model_tmp.sh
 data-bin
 pretrained_ckpt
 checkpoints
+
+local_test*

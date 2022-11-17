@@ -18,10 +18,11 @@ Clone the current repository and fairseq official repository, then merge them:
 
 ```shell
 git clone git@github.com:kNN-DTA/kNN-DTA.git
+cd kNN-DTA
 git clone git@github.com:pytorch/fairseq.git
 cd fairseq
 git checkout 7e75884
-cp -frap ../kNN-DTA/* fairseq/fairseq/
+cp -frap ../knn_dta/* ./fairseq/
 ```
 
 Set up the environment using `conda` and install dependencies:
@@ -117,6 +118,7 @@ The pre-trained DTA model is trained on 8 NVIDIA Tesla V100 GPUs. Others are tra
 You need to build the datastore offline first, and then run kNN-DTA evaluation or Ada-kNN-DTA training and evaluation.
 
 ```shell
+export data_path=$DATA_BIN
 export dstore_path=yourDstorePath
 export dataset="BindingDB_Ki"
 export ckpt_path=yourCkptPath
@@ -127,6 +129,7 @@ bash build_datastore.sh
 ### kNN-DTA Evaluation
 
 ```shell
+export data_path=$DATA_BIN
 export dstore_path=yourDstorePath
 export result_path=yourPredictionTSVFile
 export ckpt_path=yourCkptPath
@@ -137,6 +140,8 @@ export l=0.4
 export T_mol=1000
 export k_mol=8
 export l_mol=0.7
+export T_pro=1000
+export k_pro=8
 export l_pro=1
 
 bash evaluate_kNN.sh
