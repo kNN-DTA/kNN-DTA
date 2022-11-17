@@ -154,10 +154,16 @@ bash evaluate_kNN.sh
 ```shell
 bash train_adaptive_kNN.sh
 ```
+The training script will only store the last checkpoint for the following evaluation.
 
 ### Evaluate
 
 ```shell
+export data_path=$DATA_BIN
+export result_path=yourPredictionTSVFile
+export ckpt_path=yourCkptPath
+export dataset="BindingDB_Ki"
+
 bash evaluate_adaptive_kNN.sh
 ```
 

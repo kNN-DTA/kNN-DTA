@@ -1,9 +1,6 @@
 set -x
 set -e
 
-
-# bash training_v3_relu.sh --dataset {dataset} --total-num-updates {total_num_updates} --k {k} --k-mol {k} --k-pro {k} --lr {lr} --meta-hidden {meta_hidden} --batch-size {batch_size}
-
 DATASET="BindingDB_Ki"
 TOTAL_NUM_UPDATES=3170
 K=8
@@ -18,6 +15,9 @@ WARMUP_RATE=20
 META_HIDDEN=32
 META_HIDDEN_MOL=32
 META_HIDDEN_PRO=32
+
+PRETRAINED_MOLECULE_PROTEIN_ROBERTA_CKPT="./checkpoints/Ki_ckpt/checkpoint_best.pt"
+DATASTORE_PATH="./checkpoints/Ki_ckpt/dstore"
 
 # 32 9-10 GB
 # 64 14-15 GB
@@ -85,6 +85,14 @@ while [[ $# -gt 0 ]]; do
         WARMUP_RATE=$2
         shift 2
         ;;
+    --datastore-path)
+        DATASTORE_PATH=$2
+        shift 2
+        ;;
+    --pretrained-molecule-protein-roberta-ckpt)
+        PRETRAINED_MOLECULE_PROTEIN_ROBERTA_CKPT=$2
+        shift 2
+        ;;
     *)
         POSITIONAL+=("$1")
         shift
@@ -95,16 +103,14 @@ done
 
 WARMUP_UPDATES=$[TOTAL_NUM_UPDATES/WARMUP_RATE]      # 5% epochs of the number of updates
 
-# GPU_NUM=${GPU_PER_NODE_COUNT}
-
 EXP_NAME=${DATASET}_lr${LR}_bsz${BATCH_SIZE}_total_updates${TOTAL_NUM_UPDATES}_warmup_updates${WARMUP_UPDATES}_${TRAIN_SUBSET}_k${K}_k_mol${K_MOL}_k_pro${K_PRO}_mh${META_HIDDEN}_mhmol${META_HIDDEN_MOL}_mhpro${META_HIDDEN_PRO}_v3_relu_seed${SEED}_1109
 
-DTI_BIN=.data-bin/${DATASET}
+DTI_BIN=./data-bin/${DATASET}
 
 SAVE_PATH=./checkpoints/adaptive_knn_training/${EXP_NAME}
 mkdir -p $SAVE_PATH
 
-TENSORBOARD_PATH=./tensorboard_log/${EXP_NAME}
+TENSORBOARD_PATH=./$SAVE_PATH/tsb
 
 # For distributed training
 # python -m torch.distributed.launch --nproc_per_node=${GPU_PER_NODE_COUNT} --node_rank=${NODE_RANK} --nnodes=${NODE_COUNT} --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
@@ -126,9 +132,9 @@ python $(which fairseq-train) \
     --arch dti_knn_training_adaptive_v3_relu \
     --skip-invalid-size-inputs-valid-test \
     --shorten-method truncate \
-    --pretrained-molecule-protein-roberta-checkpoint ./sim_dti_model_ckpt/${DATASET}/checkpoint_best.pt \
+    --pretrained-molecule-protein-roberta-checkpoint $PRETRAINED_MOLECULE_PROTEIN_ROBERTA_CKPT \
     --fix-classification-head \
-    --datastore-path ./sim_based_dti/datastore_train_${DATASET}_no_cross_attn \
+    --datastore-path $DATASTORE_PATH \
     --knn-sim-func do_not_recomp_l2 \
     --knn-lambda-type trainable --knn-temperature-type fix \
     --knn-k-type trainable --k-lambda-net-hid-size $META_HIDDEN --k-lambda-net-hid-size-mol $META_HIDDEN_MOL --k-lambda-net-hid-size-pro $META_HIDDEN_PRO --k-lambda-net-dropout-rate 0.0 \

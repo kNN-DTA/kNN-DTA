@@ -9,16 +9,14 @@ import os
 import sys
 from argparse import Namespace
 from itertools import chain
-from typing import final
 
 import torch
 from omegaconf import DictConfig
 
-import numpy as np
-import pandas as pd
-# import swalign
-import math
-import datetime
+import sys
+from os import path
+
+sys.path.append(path.join(path.dirname( path.abspath(__file__) ), "fairseq"))
 
 from fairseq import checkpoint_utils, distributed_utils, options, utils
 from fairseq.dataclass.utils import convert_namespace_to_omegaconf
@@ -31,74 +29,17 @@ logging.basicConfig(
     level=os.environ.get("LOGLEVEL", "INFO").upper(),
     stream=sys.stdout,
 )
-# Get a logger with specified name
-logger = logging.getLogger("fairseq_cli.validate")
-# the embedding search space is twice as large as the raw similarity calculation space
+logger = logging.getLogger("evaluate_adaptive_kNN")
 
 def add_custom_arguments(parser):
-    # parser.add_argument('--arch', default='roberta_dti_mlm_regress',
-    #                     help='The model architecture')
-
-    parser.add_argument('--T', type=float, metavar='T', default=1000,
-                        help='Temperature T for softmax on paired cls embedding distance')
-
-    parser.add_argument('--T-0', type=float, metavar='T', default=1000,
-                        help='Temperature T for softmax on molecule cls embedding distance')
-    
-    parser.add_argument('--T-1', type=float, metavar='T', default=1000,
-                        help='Temperature T for softmax on protein cls embedding distance')
-
-    parser.add_argument('--k', type=int, metavar='k', default=16,
-                        help='k nearest neighbors for paired cls embedding')
-
-    parser.add_argument('--k-0', type=int, metavar='k', default=16,
-                        help='k nearest neighbors for molecule cls embedding')
-    
-    parser.add_argument('--k-1', type=int, metavar='k', default=16,
-                        help='k nearest neighbors for protein cls embedding')
-
-    parser.add_argument('--l', type=float, metavar='l', default=0.8,
-                        help='The prediction weight')
-
-    parser.add_argument('--l-update', type=float, metavar='l', default=1,
-                        help='The weight used to update prediction')
-    
-    parser.add_argument('--knn-embedding-weight-0', type=float, metavar='l', default=0.8,
-                        help='The knn embedding weight') 
-
-    parser.add_argument('--knn-embedding-weight-1', type=float, metavar='l', default=0.8,
-                        help='The knn embedding weight')   
-
-    parser.add_argument('--alpha', type=float, metavar='a', default=0.707,
-                    help='Alpha for embedding-wise search')      
-
-#################################################################################################
-    parser.add_argument('--sim', type=str, default='L2', choices=['L2', 'cosine', 'attn', 'dot'],
-                        help='The similarity metric for search. Note that --sim attn is used with use-attn-cal at the same time.')
-
-    parser.add_argument('--label-use-attn-cal', action='store_true',
-                        help='Use attention calculation when doing label-wise search')
-
-    parser.add_argument('--embedding-use-attn-cal', action='store_true',
-                        help='Use attention calculation when doing embedding-wise search')
-
-    parser.add_argument('--label-use-mean-cal', action='store_true',
-                    help='Use mean calculation when doing label-wise search')
-
-    parser.add_argument('--embedding-use-mean-cal', action='store_true',
-                        help='Use mean calculation when doing embedding-wise search')
-
-    parser.add_argument('--result-file-path', type=str, default='tmp.tsv',
-                        help='Where to save the result tsv file')
-    
+    parser.add_argument('--output-fn', type=str, default='/protein/users/v-qizhipei/tmp.tsv',
+                        help='Outpuf file path')
     return parser
-
-
 
 def main(cfg: DictConfig, override_args=None):
     if isinstance(cfg, Namespace):
         cfg = convert_namespace_to_omegaconf(cfg)
-   
+
     utils.import_user_module(cfg.common)
 
     reset_logging()
@@ -183,31 +124,11 @@ def main(cfg: DictConfig, override_args=None):
         )
 
         log_outputs = []
-
-        id_tensor_list = []
-        prediction_tensor_list = []
-        target_tensor_list = []
-
-        # Iterate over the 'subset' dataset
         for i, sample in enumerate(progress):
             sample = utils.move_to_cuda(sample) if use_cuda else sample
-            # _loss, _sample_size, log_output = task.valid_step(sample, model, criterion)
-            model.eval()
-            with torch.no_grad():
-                _sample_size, log_output = criterion(model, sample)
-            
-            
-            final_prediction = log_output['prediction'].squeeze()
-            target = log_output['target']
-            log_output_tmp = {'final_prediction': final_prediction, 'target': target, 'sample_size': log_output['sample_size'], 'ntokens': log_output['ntokens'], 'nsentences': log_output['nsentences']}
-            progress.log(log_output_tmp, step=i)
-            log_outputs.append(log_output_tmp)
-
-            id_tensor_list.append(sample['id'].detach().cpu().numpy())
-            prediction_tensor_list.append(final_prediction.detach().cpu().numpy())
-            target_tensor_list.append(target.detach().cpu().numpy())
-
-            logger.info(f'batch:{i}')
+            _loss, _sample_size, log_output = task.valid_step(sample, model, criterion)
+            progress.log(log_output, step=i)
+            log_outputs.append(log_output)
 
         if data_parallel_world_size > 1:
             log_outputs = distributed_utils.all_gather_list(
@@ -218,45 +139,17 @@ def main(cfg: DictConfig, override_args=None):
             log_outputs = list(chain.from_iterable(log_outputs))
 
         with metrics.aggregate() as agg:
-            task.reduce_metrics(log_outputs, criterion)
+            task.reduce_metrics(log_outputs, criterion, cfg.criterion)
             log_output = agg.get_smoothed_values()
 
         progress.print(log_output, tag=subset, step=i)
 
-        id_list, prediction_list, target_list = [], [], []
-        for i in id_tensor_list:
-            if i.ndim == 1:
-                for j in i:
-                    id_list.append(j)
-            else: # i.ndim == 0
-                id_list.append(i)
-
-        for i in prediction_tensor_list:
-            if i.ndim == 1:
-                for j in i:
-                    prediction_list.append(j)
-            else: # i.ndim == 0
-                prediction_list.append(i)
-
-        for i in target_tensor_list:
-            if i.ndim == 1:
-                for j in i:
-                    target_list.append(j)
-            else: # i.ndim == 0
-                target_list.append(i)
-
-        df = pd.DataFrame({'prediction': prediction_list, 'target': target_list}, index=np.array(id_list))
-        # 调整 training set 本身的顺序（原本为 fairseq 随机循环 batch 随机的顺序）
-        df.sort_index(inplace=True)
-        
-        df.to_csv(f'{cfg.criterion.result_file_path}', index=False, sep='\t')
-
-        logger.info(f"{cfg.dataset.valid_subset} done")
 
 def cli_main():
     parser = options.get_validation_parser()
     parser = add_custom_arguments(parser)
     args = options.parse_args_and_arch(parser)
+    
 
     # only override args that are explicitly given on the command line
     override_parser = options.get_validation_parser()

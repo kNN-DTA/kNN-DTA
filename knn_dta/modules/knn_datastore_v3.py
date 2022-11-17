@@ -108,7 +108,10 @@ class KNN_Dstore_V3(object):
         cls_mol = np.load(os.path.join(args.datastore_path, 'cls_0.npy'))
         cls_pro = np.load(os.path.join(args.datastore_path, 'cls_1.npy'))
         cls_mol_pro = torch.from_numpy(np.c_[cls_mol, cls_pro]).cuda()
-        cls_label = torch.from_numpy(np.load(os.path.join(args.datastore_path, 'label.npy'))).cuda()
+        
+        label_list = [float(line.strip()) for line in open(f'{args.data}/label/train.label')]
+        cls_label = torch.FloatTensor(label_list).unsqueeze(-1).cuda()
+        # cls_label = torch.from_numpy(np.load(os.path.join(args.datastore_path, 'label.npy'))).cuda()
 
         gpu_index_flat = faiss.GpuIndexFlatL2(res, self.embed_dim * 2, faiss_cfg)
         gpu_index_flat.add(cls_mol_pro)
